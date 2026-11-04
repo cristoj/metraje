@@ -1,0 +1,29 @@
+# Local agent tooling (skill registry generated per machine)
+.atl/
+
+# Per-machine Claude Code settings (the shared .claude/commands/ stays tracked)
+.claude/settings.local.json
+
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~

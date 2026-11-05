@@ -346,6 +346,16 @@ body {
 .tick { stroke: #11161a; stroke-linecap: butt; }
 .svg-num { font: 600 22px var(--font-mono); fill: #0f1317; }
 .svg-num-s { font: 600 17px var(--font-mono); fill: #0f1317; }
+.svg-scale { font: 600 12px var(--font-mono); fill: #0f1317; }
+.overview-tick { stroke: #11161a; stroke-linecap: butt; }
+/* goniometer detail: light, flat engraving like the real instrument */
+.gon-disc { fill: #ececec; stroke: #111; stroke-width: 1.4; }
+.gon-plate { fill: #d9d9d9; }
+.gon-num { font: 500 36px var(--font-body); fill: #2b2b2b; }
+.gon-num-s { font: 500 28px var(--font-body); fill: #2b2b2b; }
+.gon-index { stroke: #e5262d; }
+.gon-hit { stroke: #ff4d4d; stroke-opacity: 0.9; stroke-linecap: round; }
+.gon-core { stroke: #1b1b1b; stroke-opacity: 1; }
 .svg-cap { font: 600 12px var(--font-mono); letter-spacing: 0.16em; fill: var(--muted); }
 .lens { fill: #0f1418; }
 .lens-border { fill: none; stroke: var(--accent); stroke-width: 2; }
@@ -598,8 +608,8 @@ body {
   .topbar h1 { font-size: 1.45rem; }
   .topbar h1 small { display: none; }
 
-  #tool-nav { width: 100%; grid-auto-flow: row; grid-template-columns: repeat(3, 1fr); gap: 4px; }
-  #tool-nav a { --cut: 8px; justify-content: center; padding: 7px 4px; font-size: 0.95rem; line-height: 1.05; text-align: center; }
+  #tool-nav { width: 100%; grid-auto-flow: row; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  #tool-nav a { --cut: 8px; justify-content: center; padding: 7px 2px; font-size: 0.8rem; line-height: 1.05; text-align: center; }
   #tool-nav a .idx { display: none; }
 
   #stage { padding: 2px 10px 10px; }

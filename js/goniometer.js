@@ -92,7 +92,7 @@
     const [dx, dy] = around(DISC_RADIUS, 90);
     const [ex, ey] = around(DISC_RADIUS, 0);
 
-    let s = `<text x="110" y="18" class="svg-cap" text-anchor="start">VISTA GENERAL</text>`;
+    let s = `<text x="500" y="18" class="svg-cap" text-anchor="middle">VISTA GENERAL</text>`;
     // workpiece: the wedge between both blades
     s += `<path d="M${PIVOT.x} ${PIVOT.y} L${r(PIVOT.x + WEDGE_RADIUS)} ${PIVOT.y} A${WEDGE_RADIUS} ${WEDGE_RADIUS} 0 0 0 ${r(wx)} ${r(wy)} Z" fill="url(#${P}-work)"/>`;
     // dial segment with the 0-90 scale
@@ -184,6 +184,9 @@
         if (j % 3 === 0) s += numeral(RIM + 56, phi, j * 5, 'gon-num-s');
       }
     }
+
+    // index line: the vernier zero carried down across the main scale (where it lands among the degrees)
+    s += radial(RIM - 62, RIM - 190, 0, 1.4, 'gon-index');
 
     if (revealed) {
       // the vernier line that sits on a main-scale line, followed down through the main scale

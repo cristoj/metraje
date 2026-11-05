@@ -130,6 +130,19 @@ test('goniometer: main scale + vernier coincidence give the stored answer, which
   assert.deepEqual(failures.slice(0, 10), [], `${failures.length} mismatches`);
 });
 
+test('goniometer: the vernier zero is carried down across the main scale by a thin red index line, always', () => {
+  for (const value of [60, 2245, LEFT + 2245, 4015]) {
+    for (const options of [undefined, { revealed: true }]) {
+      const svg = goniometer.render(value, options);
+      const found = [...svg.matchAll(/<line x1="([-\d.]+)" y1="([-\d.]+)" x2="([-\d.]+)" y2="([-\d.]+)" class="gon-index"/g)];
+      assert.equal(found.length, 1, `value ${value}`);
+      const [x1, y1, x2, y2] = found[0].slice(1).map(Number);
+      assert.ok(Math.abs(x1 - center.x) < 0.05 && Math.abs(x2 - center.x) < 0.05, 'straight under the vernier zero');
+      assert.ok(radiusOf(x1, y1) < rim && radiusOf(x2, y2) < radiusOf(x1, y1), 'runs from the main scale downwards');
+    }
+  }
+});
+
 test('goniometer: the answer is only marked in red once revealed', () => {
   assert.ok(!goniometer.render(2245).includes('gon-hit'));
   assert.ok(!goniometer.render(2245, { revealed: false }).includes('gon-hit'));

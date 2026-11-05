@@ -183,17 +183,7 @@
     }
   }
 
-  /** Redraws the figure with the answer marked, keeping the zoom and the scroll position. */
-  function markAnswer(panel) {
-    const { scrollLeft, scrollTop } = panel.figure;
-    panel.figure.innerHTML = panel.tool.render(panel.value, { revealed: true });
-    applyZoom(panel);
-    panel.figure.scrollLeft = scrollLeft;
-    panel.figure.scrollTop = scrollTop;
-  }
-
   function reveal(panel) {
-    if (panel.tool.markOnReveal) markAnswer(panel);
     panel.answer.hidden = false;
     panel.answer.innerHTML = '<span class="answer-label">Respuesta</span><strong></strong><p></p>';
     panel.answer.querySelector('strong').textContent = formatAnswer(panel);

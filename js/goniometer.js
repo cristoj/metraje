@@ -142,7 +142,7 @@
     return `<text x="${r(x)}" y="${r(y)}" class="${cls}" transform="rotate(${r(degrees)} ${r(x)} ${r(y)})" text-anchor="middle" dy=".35em">${content}</text>`;
   }
 
-  function detail(value, revealed) {
+  function detail(value) {
     const answer = answerOf(value);
     const direction = isLeft(value) ? -1 : 1;
     const degrees = answer / 60;
@@ -188,21 +188,18 @@
     // index line: the vernier zero carried down across the main scale (where it lands among the degrees)
     s += radial(RIM - 62, RIM - 190, 0, 1.4, 'gon-index');
 
-    if (revealed) {
-      // the vernier line that sits on a main-scale line, followed down through the main scale
-      const phi = direction * ((answer % 60) / STEP) * VERNIER_STEP;
-      s += radial(RIM + 44, RIM - 44, phi, 7, 'gon-hit');
-      s += radial(RIM + 44, RIM - 44, phi, 1.4, 'gon-hit gon-core');
-    }
+    // the vernier line that sits on a main-scale line (the minutes), followed down through the main scale
+    const hit = direction * ((answer % 60) / STEP) * VERNIER_STEP;
+    s += radial(RIM + 44, RIM - 44, hit, 7, 'gon-hit');
+    s += radial(RIM + 44, RIM - 44, hit, 1.4, 'gon-hit gon-core');
     s += '</g>';
     s += `<rect x="20" y="${top}" width="960" height="${DETAIL_HEIGHT}" rx="6" class="lens-border"/>`;
     return s;
   }
 
-  function render(value, options) {
-    const revealed = Boolean(options && options.revealed);
+  function render(value) {
     return `<svg class="fig-gon" viewBox="0 0 1000 ${VIEW_HEIGHT}" role="img" aria-label="Goniómetro con nonio mostrando una medida" xmlns="http://www.w3.org/2000/svg">
-      <defs>${gradients(P)}</defs>${overview(answerOf(value))}${detail(value, revealed)}</svg>`;
+      <defs>${gradients(P)}</defs>${overview(answerOf(value))}${detail(value)}</svg>`;
   }
 
   function explain(value) {
@@ -239,7 +236,6 @@
     isCorrect,
     format,
     render,
-    markOnReveal: true,
     explain,
     toggle: {
       label: 'Sentido aleatorio',

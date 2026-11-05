@@ -143,10 +143,15 @@ test('goniometer: the vernier zero is carried down across the main scale by a th
   }
 });
 
-test('goniometer: the answer is only marked in red once revealed', () => {
-  assert.ok(!goniometer.render(2245).includes('gon-hit'));
-  assert.ok(!goniometer.render(2245, { revealed: false }).includes('gon-hit'));
-  assert.equal(goniometer.render(2245, { revealed: true }).match(/class="gon-hit[" ]/g).length, 2);
+test('goniometer: the coinciding vernier line is always marked in red, on the reading side', () => {
+  for (const [value, side] of [[60, 1], [2245, 1], [LEFT + 2245, -1], [LEFT + 4015, -1], [4015, 1]]) {
+    const svg = goniometer.render(value);
+    const hits = [...svg.matchAll(/<line x1="([-\d.]+)" y1="([-\d.]+)" x2="[-\d.]+" y2="[-\d.]+" class="gon-hit[" ]/g)];
+    assert.equal(hits.length, 2, `value ${value}`);
+    const division = (goniometer.answerOf(value) % 60) / 5;
+    const phi = phiOf(Number(hits[0][1]), Number(hits[0][2]));
+    assert.ok(Math.abs(phi - side * division * (23 / 12)) < 0.01, `value ${value}: marks ${phi}`);
+  }
 });
 
 test('goniometer: explanation spells out the reading and its direction', () => {

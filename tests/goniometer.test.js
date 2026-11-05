@@ -1,6 +1,8 @@
-// Run with: node --test tests/
-// Reads the generated protractor SVG the way a student would (main scale + vernier
-// coincidence) and checks it against the stored answer. Values are minutes of arc.
+// Run with: node --test tests/*.test.js
+// Reads the generated protractor SVG the way a student would (reading direction from the
+// numbering, whole degrees on the main scale, minutes from the vernier coincidence) and
+// checks it against the stored answer. Answers are minutes of arc; a value above
+// REVERSE_FLAG means the reading runs to the left.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
@@ -8,7 +10,8 @@ require('../js/measure.js');
 require('../js/svg-kit.js');
 const goniometer = require('../js/goniometer.js');
 
-const { vz, scale, baseline } = goniometer.layout;
+const { center, rim } = goniometer.layout;
+const LEFT = 10000;
 
 test('goniometer: parses degrees and minutes in the usual spellings', () => {
   for (const [raw, minutes] of [
@@ -45,50 +48,95 @@ test('goniometer: formats minutes of arc as degrees and minutes', () => {
   assert.equal(goniometer.format(5), '0° 05′');
 });
 
-test('goniometer: random readings are multiples of 5′ inside the drawn scale', () => {
-  for (let i = 0; i < 2000; i++) {
-    const value = goniometer.random();
-    assert.equal(value % 5, 0);
-    assert.ok(value >= 60 && value <= 4015, `value ${value}`);
-  }
+test('goniometer: the reading direction does not change the answer', () => {
+  assert.equal(goniometer.answerOf(2245), 2245);
+  assert.equal(goniometer.answerOf(LEFT + 2245), 2245);
 });
 
-function ticks(svg, y1) {
-  return [...svg.matchAll(/<line x1="([-\d.]+)" y1="([-\d.]+)" x2="[-\d.]+" y2="([-\d.]+)" class="tick"/g)]
-    .filter((m) => Math.abs(Number(m[2]) - y1) < 1e-6 && Number(m[3]) !== y1)
-    .map((m) => Number(m[1]));
+test('goniometer: random readings are multiples of 5′ inside the drawn scale, in both directions', () => {
+  const sides = new Set();
+  for (let i = 0; i < 2000; i++) {
+    const value = goniometer.random();
+    sides.add(value >= LEFT);
+    const answer = goniometer.answerOf(value);
+    assert.equal(answer % 5, 0);
+    assert.ok(answer >= 60 && answer <= 4015, `answer ${answer}`);
+  }
+  assert.deepEqual([...sides].sort(), [false, true]);
+});
+
+test('goniometer: with a fixed direction every reading runs to the right', () => {
+  for (let i = 0; i < 500; i++) assert.ok(goniometer.random(false) < LEFT);
+});
+
+const phiOf = (x, y) => (Math.atan2(x - center.x, center.y - y) * 180) / Math.PI;
+const radiusOf = (x, y) => Math.hypot(x - center.x, y - center.y);
+
+/** Radial marks that start on the rim: inward ones belong to the main scale, outward ones to the vernier. */
+function marks(svg) {
+  return [...svg.matchAll(/<line x1="([-\d.]+)" y1="([-\d.]+)" x2="([-\d.]+)" y2="([-\d.]+)" class="tick"/g)]
+    .map((m) => m.slice(1).map(Number))
+    .filter(([x1, y1]) => Math.abs(radiusOf(x1, y1) - rim) < 0.05)
+    .map(([x1, y1, x2, y2]) => ({ phi: phiOf(x1, y1), main: radiusOf(x2, y2) < rim }));
 }
 
-function labels(svg) {
-  return [...svg.matchAll(/<text x="([-\d.]+)" y="[-\d.]+" class="svg-num" text-anchor="middle">(\d+)<\/text>/g)].map((m) => ({
-    x: Number(m[1]),
-    degrees: Number(m[2]),
+function numerals(svg, cls) {
+  return [...svg.matchAll(new RegExp(`<text x="([-\\d.]+)" y="([-\\d.]+)" class="${cls}"[^>]*>(\\d+)</text>`, 'g'))].map((m) => ({
+    phi: phiOf(Number(m[1]), Number(m[2])),
+    n: Number(m[3]),
   }));
 }
 
-test('goniometer: main scale + vernier coincidence give the stored answer', () => {
+/** What a student does: direction from the numbering, degrees from the main scale, minutes from the coincidence. */
+function read(svg) {
+  const all = marks(svg);
+  const main = all.filter((t) => t.main).map((t) => t.phi);
+  const vernier = all.filter((t) => !t.main).map((t) => t.phi);
+  const labels = numerals(svg, 'gon-num');
+
+  const zero = labels.find((l) => l.n === 0); // the main-scale 0 is in view
+  let direction;
+  let anchor;
+  if (zero) {
+    direction = zero.phi < 0 ? 1 : -1; // the vernier zero (phi = 0) lies on that side of the main zero
+    anchor = zero;
+  } else {
+    const [a, b] = labels.filter((l) => l.n > 0).sort((p, q) => p.n - q.n);
+    direction = Math.sign(b.phi - a.phi); // the numbers grow towards the reading side
+    anchor = a;
+  }
+
+  // whole degrees: the last main-scale line before the vernier zero, along the reading direction
+  const before = main.filter((p) => direction * p <= 0.01);
+  const tick = direction > 0 ? Math.max(...before) : Math.min(...before);
+  const degrees = Math.round(anchor.n + direction * (tick - anchor.phi));
+
+  // minutes: the first vernier line of that side that sits on a main-scale line
+  const side = vernier.filter((p) => direction * p >= -0.001).sort((p, q) => Math.abs(p) - Math.abs(q));
+  const division = side.findIndex((p) => main.some((m) => Math.abs(m - p) < 0.03));
+  return { direction, minutes: degrees * 60 + division * 5 };
+}
+
+test('goniometer: main scale + vernier coincidence give the stored answer, whichever way it reads', () => {
   const failures = [];
-  for (let value = 60; value <= 4015; value += 5) {
-    const svg = goniometer.render(value);
-    const main = ticks(svg, baseline);
-    const vernier = ticks(svg, baseline + 4);
-
-    // whole degrees: the last main-scale line at or left of the vernier zero
-    const left = Math.max(...main.filter((x) => x <= vz + 0.5));
-    const anchor = labels(svg).reduce((best, l) => (Math.abs(l.x - left) < Math.abs(best.x - left) ? l : best));
-    const degrees = anchor.degrees + Math.round((left - anchor.x) / scale);
-
-    // minutes: the first vernier line that sits exactly on a main-scale line
-    const division = vernier.findIndex((x) => main.some((mx) => Math.abs(mx - x) < 0.6));
-    const total = degrees * 60 + division * 5;
-    if (total !== value) failures.push(`${value}: reads ${total}`);
+  for (let answer = 60; answer <= 4015; answer += 5) {
+    for (const [value, direction] of [[answer, 1], [LEFT + answer, -1]]) {
+      const reading = read(goniometer.render(value));
+      if (reading.minutes !== answer || reading.direction !== direction) {
+        failures.push(`${value}: reads ${reading.minutes} (${reading.direction})`);
+      }
+    }
   }
   assert.deepEqual(failures.slice(0, 10), [], `${failures.length} mismatches`);
 });
 
-test('goniometer: explanation spells out the reading', () => {
-  assert.equal(
-    goniometer.explain(2245),
-    'Escala principal: 37° + nonio: 5 × 5′ (25′) = 37° 25′',
-  );
+test('goniometer: the answer is only marked in red once revealed', () => {
+  assert.ok(!goniometer.render(2245).includes('gon-hit'));
+  assert.ok(!goniometer.render(2245, { revealed: false }).includes('gon-hit'));
+  assert.equal(goniometer.render(2245, { revealed: true }).match(/class="gon-hit[" ]/g).length, 2);
+});
+
+test('goniometer: explanation spells out the reading and its direction', () => {
+  assert.equal(goniometer.explain(2245), 'Hacia la derecha: escala principal 37° + nonio 5 × 5′ (25′) = 37° 25′');
+  assert.equal(goniometer.explain(LEFT + 2245), 'Hacia la izquierda: escala principal 37° + nonio 5 × 5′ (25′) = 37° 25′');
 });

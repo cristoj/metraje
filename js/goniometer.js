@@ -16,14 +16,14 @@
   const STEP = 5;
 
   // detail (magnified) view geometry; shared with the tests
-  const DETAIL_TOP = 270;
+  const DETAIL_TOP = 345;
   const layout = { vz: 70, scale: 34, baseline: DETAIL_TOP + 112 };
 
   const VIEW_HEIGHT = DETAIL_TOP + 255;
-  const PIVOT = { x: 260, y: 240 };
-  const DISC_RADIUS = 125;
-  const WEDGE_RADIUS = 185;
-  const BLADE_LENGTH = 235;
+  const PIVOT = { x: 240, y: 315 };
+  const DISC_RADIUS = 170;
+  const WEDGE_RADIUS = 240;
+  const BLADE_LENGTH = 300;
 
   /** 1 deg 00' .. 66 deg 55' in 5' steps. */
   function random() {
@@ -71,13 +71,13 @@
     // dial segment with the 0-90 scale
     s += `<path d="M${PIVOT.x} ${PIVOT.y} L${r(ex)} ${r(ey)} A${DISC_RADIUS} ${DISC_RADIUS} 0 0 0 ${r(dx)} ${r(dy)} Z" fill="url(#${P}-steel)" stroke="#59636a"/>`;
     for (let a = 0; a <= 90; a++) {
-      const len = a % 10 === 0 ? 14 : a % 5 === 0 ? 10 : 6;
+      const len = a % 10 === 0 ? 18 : a % 5 === 0 ? 13 : 8;
       const [x1, y1] = around(DISC_RADIUS, a);
       const [x2, y2] = around(DISC_RADIUS - len, a);
       s += line(x1, y1, x2, y2, 'tick', a % 10 === 0 ? 1.6 : 1);
       if (a % 10 === 0 && a > 0 && a < 90) {
-        const [tx, ty] = around(DISC_RADIUS - 30, a);
-        s += `<text x="${r(tx)}" y="${r(ty)}" class="svg-num-s" text-anchor="middle" dy=".35em">${a}</text>`;
+        const [tx, ty] = around(DISC_RADIUS - 34, a);
+        s += `<text x="${r(tx)}" y="${r(ty)}" class="svg-scale" text-anchor="middle" dy=".35em">${a}</text>`;
       }
     }
     // fixed blade, below the zero line

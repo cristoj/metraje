@@ -5,7 +5,7 @@
   const { parseMillimetres, isCorrect, formatMillimetres, randomDifferent } = window.Measure;
   const { MIN: ZOOM_MIN, MAX: ZOOM_MAX, clampZoom, stepZoom, pinchZoom, wheelZoom, formatZoom } = window.Zoom;
   const tools = window.Tools;
-  const order = ['caliper', 'micrometer', 'dial'];
+  const order = ['caliper', 'micrometer', 'dial', 'goniometer'];
 
   const ICONS = {
     ok: '<svg class="verdict-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#2ed47a"/><path d="M13 25l8 8 15-17" fill="none" stroke="#06210f" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -13,9 +13,12 @@
     info: '<svg class="verdict-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#8e9aa4"/><path d="M24 14v13" stroke="#10161a" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="34" r="3" fill="#10161a"/></svg>',
   };
 
+  const DEFAULT_INPUT_HELP = 'Escribe la lectura en milímetros (vale coma o punto, por ejemplo 12,34).';
+  const DEFAULT_INVALID_HINT = 'Escribe un número en mm, por ejemplo 12,34';
+
   const USAGE = [
     'Observa la medida que muestra el instrumento.',
-    'Escribe la lectura en milímetros (vale coma o punto, por ejemplo 12,34).',
+    null, // how to type the reading: depends on the tool's unit
     'Responder comprueba tu lectura: tiene que coincidir exactamente con la del instrumento.',
     'Ver respuesta muestra la medida correcta y cómo se obtiene.',
     'Otra medida genera una nueva medición aleatoria.',
@@ -159,13 +162,22 @@
     return panel.tool.answerOf ? panel.tool.answerOf(panel.value) : panel.value;
   }
 
+  /** Answer as shown to the student; tools with their own unit (degrees) provide `format`. */
+  function formatAnswer(panel) {
+    const answer = answerOf(panel);
+    return panel.tool.format ? panel.tool.format(answer) : `${formatMillimetres(answer)} mm`;
+  }
+
   function check(panel) {
-    if (parseMillimetres(panel.input.value) === null) {
-      showVerdict(panel, 'info', 'Medida no válida', 'Escribe un número en mm, por ejemplo 12,34');
+    const { tool, input } = panel;
+    const parse = tool.parse || parseMillimetres;
+    if (parse(input.value) === null) {
+      showVerdict(panel, 'info', 'Medida no válida', tool.invalidHint || DEFAULT_INVALID_HINT);
       return;
     }
-    if (isCorrect(panel.input.value, answerOf(panel))) {
-      showVerdict(panel, 'ok', 'Correcto', `${formatMillimetres(answerOf(panel))} mm`);
+    const matches = tool.isCorrect || isCorrect;
+    if (matches(input.value, answerOf(panel))) {
+      showVerdict(panel, 'ok', 'Correcto', formatAnswer(panel));
     } else {
       showVerdict(panel, 'bad', 'Incorrecto', 'La medida no coincide con la del instrumento');
     }
@@ -174,7 +186,7 @@
   function reveal(panel) {
     panel.answer.hidden = false;
     panel.answer.innerHTML = '<span class="answer-label">Respuesta</span><strong></strong><p></p>';
-    panel.answer.querySelector('strong').textContent = `${formatMillimetres(answerOf(panel))} mm`;
+    panel.answer.querySelector('strong').textContent = formatAnswer(panel);
     panel.answer.querySelector('p').textContent = panel.tool.explain(panel.value);
   }
 
@@ -200,7 +212,10 @@
     document.getElementById('help-title').textContent = tool.help.title;
     document.getElementById('help-body').replaceChildren(
       section('Cómo se lee', tool.help.steps),
-      section('Cómo usar el simulador', USAGE),
+      section(
+        'Cómo usar el simulador',
+        USAGE.map((step) => step || tool.inputHelp || DEFAULT_INPUT_HELP),
+      ),
     );
     helpDialog.showModal();
   }
@@ -211,6 +226,8 @@
     root.querySelector('[data-title]').textContent = tool.title;
     root.querySelector('[data-resolution]').textContent = tool.resolution;
     root.querySelector('[data-range]').textContent = tool.range;
+    root.querySelector('[data-unit]').textContent = tool.unit || 'mm';
+    if (tool.placeholder) root.querySelector('input[name="answer"]').placeholder = tool.placeholder;
 
     const panel = {
       tool,
